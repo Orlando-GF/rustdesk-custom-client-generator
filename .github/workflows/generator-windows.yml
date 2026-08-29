@@ -138,8 +138,7 @@ jobs:
 
       - name: fix connection delay
         if: ${{ fromJson(inputs.extras).delayFix == 'true' }}
-        shell: bash
-        run: sed -i -e '/if !key.is_empty() && !token.is_empty() {/,/}/d' ./src/client.rs
+        run: git apply ./repository/.github/patches/connectionDelay.diff
       - name: Remove installation tip for Windows
         run: git apply ./repository/.github/patches/windowsRemoveInstallationTip.diff
       - name: Remove setup_server_tip

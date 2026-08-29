@@ -136,8 +136,7 @@ jobs:
 
       - name: fix connection delay
         if: ${{ fromJson(inputs.extras).delayFix == 'true' }}
-        shell: bash
-        run: sed -i -e '/if !key.is_empty() && !token.is_empty() {/,/}/d' ./src/client.rs
+        run: git apply ./repository/.github/patches/connectionDelay.diff
       - name: Remove installation tip for Windows
         run: git apply ./repository/.github/patches/windowsRemoveInstallationTip.diff
       - name: Remove setup_server_tip
@@ -365,14 +364,6 @@ jobs:
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/desktop/pages/desktop_home_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/mobile/pages/connection_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./src/ui/index.tis
-
-      - name: allow custom.txt
-        continue-on-error: true
-        shell: bash
-        run: |
-          sed -i -e '/const KEY:/,/};/d' ./src/common.rs
-          sed -i -e '/let Ok(data) = sign::verify(&data, &pk)/,/};/d' ./src/common.rs
-          # sed -i '/intl:/a \ \ archive: ^3.6.1' ./flutter/pubspec.yaml
 
       - name: replace flutter icons
         if: ${{ hashFiles('repository/img/logo.png') != '' }}

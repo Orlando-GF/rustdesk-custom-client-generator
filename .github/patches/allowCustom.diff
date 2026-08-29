@@ -1,8 +1,8 @@
 diff --git a/src/common.rs b/src/common.rs
-index 56361a5da..92b221e9a 100644
+index b875d54..9fa68a9 100644
 --- a/src/common.rs
 +++ b/src/common.rs
-@@ -1474,15 +1474,15 @@ pub fn read_custom_client(config: &str) {
+@@ -2183,15 +2183,15 @@ pub fn read_custom_client(config: &str) {
          log::error!("Failed to decode custom client config");
          return;
      };
