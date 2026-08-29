@@ -368,6 +368,12 @@ jobs:
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./flutter/lib/mobile/pages/connection_page.dart
           sed -i -e 's|https://rustdesk.com/download|${{ fromJson(inputs.extras).downloadLink }}|' ./src/ui/index.tis
 
+      - name: set unique Android applicationId
+        shell: bash
+        run: |
+          # Play Protect bloqueia APK modificado com o package oficial (com.carriez.flutter_hbb).
+          sed -i 's/applicationId "com.carriez.flutter_hbb"/applicationId "me.lavai.tv"/' ./flutter/android/app/build.gradle
+
       - name: replace flutter icons
         if: ${{ hashFiles('repository/img/logo.png') != '' }}
         run: |
@@ -413,14 +419,8 @@ jobs:
           name: librustdesk.so.${{ matrix.job.target }}
           path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
 
-      - name: icons
-        if: ${{ hashFiles('repository/img/logo.png') != '' }}
-        continue-on-error: true
-        run: |
-          mv ./flutter/assets/icon.svg ./flutter/assets/icon.svg.bak
-          convert ./res/icon.png ./flutter/assets/icon.svg
-          convert ./res/128x128.png -resize 200% ./flutter/assets/128x128@2x.png || true
-          cp ./flutter/assets/icon.svg ./res/scalable.svg
+      # PNG→SVG via ImageMagick/potrace não existe no runner Ubuntu e só serve ao UI desktop.
+      # Ícones Android já são gerados em "replace flutter icons".
 
       - name: Build rustdesk
         shell: bash
@@ -428,8 +428,17 @@ jobs:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           export PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH
-          # temporary use debug sign config
-          sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
+          if [ -n "${{ secrets.ANDROID_SIGNING_KEY }}" ]; then
+            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 -d > ./flutter/android/lavai-release.jks
+            cat > ./flutter/android/key.properties <<EOF
+storePassword=${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+keyAlias=${{ secrets.ANDROID_ALIAS }}
+storeFile=lavai-release.jks
+EOF
+          else
+            sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
+          fi
           case ${{ matrix.job.target }} in
             aarch64-linux-android)
             mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
