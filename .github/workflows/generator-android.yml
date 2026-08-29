@@ -429,7 +429,7 @@ jobs:
         run: |
           export PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH
           if [ -n "${{ secrets.ANDROID_SIGNING_KEY }}" ]; then
-            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 -d > ./flutter/android/lavai-release.jks
+            echo "${{ secrets.ANDROID_SIGNING_KEY }}" | base64 -d > ./flutter/android/app/lavai-release.jks
             printf '%s\n' \
               "storePassword=${{ secrets.ANDROID_KEY_STORE_PASSWORD }}" \
               "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" \
