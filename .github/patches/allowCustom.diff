@@ -27,3 +27,52 @@ index b875d54..9fa68a9 100644
      let Ok(mut data) =
          serde_json::from_slice::<std::collections::HashMap<String, serde_json::Value>>(&data)
      else {
+diff --git a/flutter/lib/models/native_model.dart b/flutter/lib/models/native_model.dart
+--- a/flutter/lib/models/native_model.dart
++++ b/flutter/lib/models/native_model.dart
+@@ -212,9 +212,18 @@ class PlatformFFI {
+       await _ffiBind.mainDeviceId(id: id);
+       await _ffiBind.mainDeviceName(name: name);
+       await _ffiBind.mainSetHomeDir(home: _homeDir);
++      var customClientConfig = '';
++      if (isAndroid) {
++        try {
++          customClientConfig =
++              (await rootBundle.loadString('assets/custom.txt')).trim();
++        } catch (e) {
++          debugPrint('Failed to load assets/custom.txt: $e');
++        }
++      }
+       await _ffiBind.mainInit(
+         appDir: _dir,
+-        customClientConfig: '',
++        customClientConfig: customClientConfig,
+       );
+     } catch (e) {
+       debugPrintStack(label: 'initialize failed: $e');
+diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
+--- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
++++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
+@@ -243,7 +243,21 @@
+         // keep the config dir same with flutter
+         val prefs = applicationContext.getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)
+         val configPath = prefs.getString(KEY_APP_DIR_CONFIG_PATH, "") ?: ""
+-        FFI.startServer(configPath, "")
++        var customClientConfig = ""
++        val assetCandidates = arrayOf(
++            "flutter_assets/assets/custom.txt",
++            "assets/custom.txt"
++        )
++        for (path in assetCandidates) {
++            try {
++                applicationContext.assets.open(path).bufferedReader().use {
++                    customClientConfig = it.readText().trim()
++                }
++                if (customClientConfig.isNotEmpty()) break
++            } catch (_: Exception) {
++            }
++        }
++        FFI.startServer(configPath, customClientConfig)
+ 
+         createForegroundNotification()
+     }
