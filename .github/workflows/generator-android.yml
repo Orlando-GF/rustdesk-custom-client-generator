@@ -74,6 +74,9 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"
 
+permissions:
+  contents: write
+
 jobs:
   generate-bridge-linux:
     uses: ./.github/workflows/bridge.yml
@@ -493,8 +496,16 @@ jobs:
           # override default build-tools version (29.0.3) -- optional
           BUILD_TOOLS_VERSION: "30.0.2"
 
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.filename }}-${{ matrix.job.arch }}-${{ env.VERSION }}
+          path: ./signed-apk/*.apk
+          if-no-files-found: error
+
       - name: Release
-        uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}-${{ fromJson(inputs.extras).patch }}
           prerelease: true
