@@ -1,0 +1,64 @@
+diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt
+--- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt
++++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt
+@@ -22,12 +22,7 @@ class BootReceiver : BroadcastReceiver() {
+         if (Intent.ACTION_BOOT_COMPLETED == intent.action || DEBUG_BOOT_COMPLETED == intent.action) {
+             // check SharedPreferences config
+             val prefs = context.getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)
+-            if (!prefs.getBoolean(KEY_START_ON_BOOT_OPT, false)) {
++            if (!prefs.getBoolean(KEY_START_ON_BOOT_OPT, true)) {
+                 Log.d(logTag, "KEY_START_ON_BOOT_OPT is false")
+                 return
+             }
+-            // check pre-permission
+-            if (!XXPermissions.isGranted(context, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, SYSTEM_ALERT_WINDOW)){
+-                Log.d(logTag, "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS or SYSTEM_ALERT_WINDOW is not granted")
+-                return
+-            }
+ 
+             val it = Intent(context, MainService::class.java).apply {
+                 action = ACT_INIT_MEDIA_PROJECTION_AND_SERVICE
+diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
+--- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
++++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
+@@ -95,6 +95,12 @@ class MainActivity : FlutterActivity() {
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++        // Lavai TV: after first manual open, always start on boot
++        getSharedPreferences(KEY_SHARED_PREFERENCES, MODE_PRIVATE)
++            .edit()
++            .putBoolean(KEY_START_ON_BOOT_OPT, true)
++            .apply()
+         if (_rdClipboardManager == null) {
+             _rdClipboardManager = RdClipboardManager(getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+             FFI.setClipboardManager(_rdClipboardManager!!)
+diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
+--- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
++++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
+@@ -346,7 +346,24 @@ class MainService : Service() {
+                 requestMediaProjection()
+             }
+         }
+-        return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
++        return START_STICKY
++    }
++
++    override fun onTaskRemoved(rootIntent: Intent?) {
++        super.onTaskRemoved(rootIntent)
++        val prefs = getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)
++        if (!prefs.getBoolean(KEY_START_ON_BOOT_OPT, true)) {
++            return
++        }
++        val restartIntent = Intent(applicationContext, MainService::class.java).apply {
++            action = ACT_INIT_MEDIA_PROJECTION_AND_SERVICE
++            putExtra(EXT_INIT_FROM_BOOT, true)
++        }
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
++            applicationContext.startForegroundService(restartIntent)
++        } else {
++            applicationContext.startService(restartIntent)
++        }
+     }
+ 
+     override fun onConfigurationChanged(newConfig: Configuration) {
