@@ -146,7 +146,40 @@ jobs:
         run: git apply ./repository/.github/patches/removeSetupServerTip.diff
       - name: Enable start on boot for TV
         if: fromJson(inputs.extras).startOnBoot == 'true'
-        run: git apply ./repository/.github/patches/startOnBoot.diff
+        shell: bash
+        run: |
+          sed -i 's/getBoolean(KEY_START_ON_BOOT_OPT, false)/getBoolean(KEY_START_ON_BOOT_OPT, true)/' \
+            ./flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt
+          sed -i '/check pre-permission/,+4d' \
+            ./flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/BootReceiver.kt
+          sed -i '/super.onCreate(savedInstanceState)/a\
+              // Lavai TV: after first manual open, always start on boot\
+              getSharedPreferences(KEY_SHARED_PREFERENCES, MODE_PRIVATE)\
+                  .edit()\
+                  .putBoolean(KEY_START_ON_BOOT_OPT, true)\
+                  .apply()' \
+            ./flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainActivity.kt
+          sed -i 's/return START_NOT_STICKY.*/return START_STICKY/' \
+            ./flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
+          sed -i '/override fun onConfigurationChanged/i\
+              override fun onTaskRemoved(rootIntent: Intent?) {\
+                  super.onTaskRemoved(rootIntent)\
+                  val prefs = getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)\
+                  if (!prefs.getBoolean(KEY_START_ON_BOOT_OPT, true)) {\
+                      return\
+                  }\
+                  val restartIntent = Intent(applicationContext, MainService::class.java).apply {\
+                      action = ACT_INIT_MEDIA_PROJECTION_AND_SERVICE\
+                      putExtra(EXT_INIT_FROM_BOOT, true)\
+                  }\
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {\
+                      applicationContext.startForegroundService(restartIntent)\
+                  } else {\
+                      applicationContext.startService(restartIntent)\
+                  }\
+              }\
+          ' \
+            ./flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
       - name: Remove setup_server_tip
         run: git apply ./repository/.github/patches/allowCustom.diff
       - name: Remove scam alert on Android
