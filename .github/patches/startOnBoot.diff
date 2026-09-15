@@ -36,14 +36,14 @@ diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainAct
 diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
 --- a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
 +++ b/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainService.kt
-@@ -346,7 +346,24 @@ class MainService : Service() {
+@@ -346,9 +346,25 @@ class MainService : Service() {
                  requestMediaProjection()
              }
          }
 -        return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
 +        return START_STICKY
-+    }
-+
+     }
+ 
 +    override fun onTaskRemoved(rootIntent: Intent?) {
 +        super.onTaskRemoved(rootIntent)
 +        val prefs = getSharedPreferences(KEY_SHARED_PREFERENCES, FlutterActivity.MODE_PRIVATE)
@@ -59,6 +59,8 @@ diff --git a/flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb/MainSer
 +        } else {
 +            applicationContext.startService(restartIntent)
 +        }
-     }
- 
++    }
++
      override fun onConfigurationChanged(newConfig: Configuration) {
+         super.onConfigurationChanged(newConfig)
+         updateScreenInfo(newConfig.orientation)
